@@ -18,25 +18,35 @@ my $preDropFile='Millar_AllTeamLineup_end2020.txt';
 my $draftedFile='drafted_millar.txt';
 
 # list of years to look back at stats
-my @YEARS=(2018,2019,2018,2017,2016);
+my @YEARS=(2020,2019,2018,2017,2016);
 
 # weighting for previous year stats 
-my @WEIGHTS=(0.4*(162/60),0.4,0.1,0.1);
+my @WEIGHTS=(0.4*(162/60),0.4,0.2,0.1,0.1);
 
 # display this many top players
-my $nplayers=15;
+#my $nplayers=20;
 
 #--------------------END CONFIG---------------------#
 
 
-print "What Postion (C,1B,2B,3B,SS,OF,DH,U,all)?\n";
+print "What Postion (P,C,1B,2B,3B,SS,OF,DH,U,ALLBAT,ALL)?\n";
 my $pos=<>;
 chomp $pos;
 $pos=uc($pos);
 
+
+print "How Many Top Players To List?\n";
+my $nplayers=<>;
+chomp $nplayers;
+
+
 print "\n       D I L L G O R I T H M";
 print "\n       ~~~~~~~~~~~~~~~~~~~~~";
-print "\n          Millar Batters\n";
+print "\n    Scoring: $scoringFile\n";
+my $sss=join(',',@YEARS);
+print "\n    Years: [$sss]";
+$sss=join(',',@WEIGHTS);
+print "\n    Weights: [$sss]\n";
 
 
 my %batScoring;
@@ -64,6 +74,7 @@ while (<IN>){
           last if $_=~ m/END/;
           $_ =~ s/^\s+//;
           my ($key,$val)=split('\s+',$_);
+          $key="P-$key";
           $pitchScoring{$key}=$val;
           #print "scoring $key is $val points\n";
       }   
@@ -83,42 +94,77 @@ my %position;
 
 foreach my $year (@YEARS){
    my $dir="$year-stats";
-
    # this is a loop over players below
-   open IN, "<$dir/mlb-player-stats-Batters.csv";
-   my $line=<IN>;
-   chomp $line;
-   $line =~ s/^\s+//;
-   my @statNames=split(',',$line);
-   my $qPlayer=$statNames[0];
-   while (<IN>){
-      chomp;
-      $_ =~ s/^\s+//;
-      my @vals=split(',',$_);
-      my %stats;
-      foreach my $stat (@statNames){
-          my $val=shift(@vals);
-          $stats{$stat}=$val;
+   #print "year $year\n";
+   
+   if (($pos eq 'P') or ($pos eq 'ALL')){ 
+      open IN, "<$dir/mlb-player-stats-P.csv";
+      my $line=<IN>;
+      #chomp $line;
+      $line =~ s/^\s+//;
+      my @statNames=split(',',$line);
+      my $qPlayer='P-'."$statNames[0]";
+      #  sleep(10);
+      while (<IN>){
+         chomp;
+         $_ =~ s/^\s+//;
+         my @vals=split(',',$_);
+         my %stats;
+         foreach my $stat (@statNames){
+             my $val=shift(@vals);
+             $stats{"P-$stat"}=$val;
+         }
+         # sum up the score from this year
+         my $score=0; 
+         foreach my $stat (keys %pitchScoring){
+             $score+=$pitchScoring{$stat}*$stats{$stat} if defined $stats{$stat};
+         }
+         # average the score by games played
+         # print " games played is $stats{G}\n";
+         my $ngames= $stats{'P-IP'};   # for pitchers use innings pitched instead of games played
+         #print "$year   $stats{$qPlayer} :: $score from $ngames games\n";
+         my $player= $stats{$qPlayer};
+         $scores{$player}->{$year}=$score;
+         $perGameScores{$player}->{$year}=$score/$ngames;
+         $nGames{$player}->{$year}=$ngames;
+         $position{$player}='P';
       }
-      # sum up the score from this year
-      my $score=0; 
-      foreach my $stat (keys %batScoring){
-          $score+=$batScoring{$stat}*$stats{$stat} if defined $stats{$stat};
-      }
-      # average the score by games played
-      # print " games played is $stats{G}\n";
-      my $ngames= $stats{G};
-     
-      #print "$year   $stats{$qPlayer} :: $score from $ngames games\n";
-      my $player= $stats{$qPlayer};
-      $scores{$player}->{$year}=$score;
-      $perGameScores{$player}->{$year}=$score/$ngames;
-      $nGames{$player}->{$year}=$ngames;
-      $position{$player}=$stats{Pos};
-      #sleep(1);
-
+      close (IN);
    }
-   close (IN);
+   
+   if ($pos ne 'P'){
+      open IN, "<$dir/mlb-player-stats-Batters.csv";
+      my $line=<IN>;
+      chomp $line;
+      $line =~ s/^\s+//;
+      my @statNames=split(',',$line);
+      my $qPlayer=$statNames[0];
+      while (<IN>){
+         chomp;
+         $_ =~ s/^\s+//;
+         my @vals=split(',',$_);
+         my %stats;
+         foreach my $stat (@statNames){
+             my $val=shift(@vals);
+             $stats{$stat}=$val;
+         }
+         # sum up the score from this year
+         my $score=0; 
+         foreach my $stat (keys %batScoring){
+             $score+=$batScoring{$stat}*$stats{$stat} if defined $stats{$stat};
+         }
+         # average the score by games played
+         # print " games played is $stats{G}\n";
+         my $ngames= $stats{G};
+         #print "$year   $stats{$qPlayer} :: $score from $ngames games\n";
+         my $player= $stats{$qPlayer};
+         $scores{$player}->{$year}=$score;
+         $perGameScores{$player}->{$year}=$score/$ngames;
+         $nGames{$player}->{$year}=$ngames;
+         $position{$player}=$stats{Pos};
+      }
+      close (IN);
+   }
 
 
 }
@@ -128,15 +174,16 @@ foreach my $year (@YEARS){
 my %FINALSCORE;
 
 foreach my $player (keys %scores){
-    #print "$player\n";
     my $total=0;
     my $wtTotal=0;
+    my $nw=0;
     foreach my $year (@YEARS){
-        my $weight = shift @WEIGHTS; push @WEIGHTS, $weight;
         if (defined ($scores{$player}->{$year})){
+            my $weight = $WEIGHTS[$nw];
             $total+=$scores{$player}->{$year}*$weight;
             $wtTotal+=$weight;
         }
+        $nw++;
      }
      $FINALSCORE{$player}=int($total/$wtTotal); 
         
@@ -153,6 +200,7 @@ foreach my $player (@sortedPlayers){
   $available=0 if &isInFile($keepFile,$player);
   $available=0 if &isInFile($draftedFile,$player);
   next unless $available; 
+
 
   my $starit=0;  # stars for players people had last year
   my ($av,$morePos)=&isInFile($preDropFile,$player);
@@ -206,12 +254,17 @@ foreach my $player (keys %scores){
     #  print "$player m=$m b=$b [s: @N ] [y: @YEARS] = $projGms\n";
     my $npoints=$#N+1;
 
-    $projGms=162 if $projGms > 162;
+    if ($position{$player} eq 'P'){
+       $projGms=220 if $projGms > 220;
+    }else{
+       $projGms=162 if $projGms > 162;
+    }
+
 
     $PROJSCORE{$player}=int($projGms*$projScr);
     my $str='';
     $str="!-TOP-$nplayers-!" if (defined $top20{$player});
-    $PROJVALS{$player}=sprintf('nYrs=%d, projGames=%d, scoreSlope=%0.2f %s',$npoints,$projGms,$m,$str);
+    $PROJVALS{$player}=sprintf('nYrs=%d, proj-G/IP=%d, scoreSlope=%0.2f %s',$npoints,$projGms,$m,$str);
 
 
 }
@@ -262,13 +315,15 @@ sub isInFile{
    my $file=shift;
    my $player=shift;
    $player=lc($player);
- #print "$player in $file\n";
+   #print "$player in $file\n";
    open IN, "<$file";
    while  (<IN>){
       if (lc($_) =~ m/$player\s+(.+)\s+\|/){
          # print "--------$1\n";
           return (1,$1);
       }
+      return 1  if (lc($_) =~ m/$player/);
+
      # return $1 if lc($_) =~ m/$player\s+(+.+)\s+|/;
    } 
    return 0;
