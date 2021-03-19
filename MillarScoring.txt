@@ -1,0 +1,38 @@
+BATTING
+H 5	Singles	5 points
+2B 10	Doubles	10 points
+3B 15	Triples	15 points
+BB 4	Walks (Batters)	4 points
+CS -2	Caught Stealing	-2 points
+E -999999	Errors	-3 point
+GDP -999999	Ground Into Double Plays	-2 point
+HBP 3	Hit by Pitch	3 points
+HR 17	Home Runs	17 points
+SO -1   Strikeouts (Batter)	-1 point
+R 5	Runs	5 points
+RBI 6	Runs Batted In	6 points
+SB 8	Stolen Bases	8 points
+SF 2	Sacrifice Flies	2 points
+SH 2	Sacrifice Hits	2 pointsA
+END
+PITCHING	NAME	SETTINGS
+H -4	Singles Allowed	-3 points # average of singles, doubles, trips
+2BA -999999	Doubles Allowed	-4 points
+3BA -999999	Triples Allowed	-5 points
+B -999999	Balks	-3 points
+BB -2	Walks Issued (Pitchers)	-2 points  BBI=WHIP*IP-H
+BS 0	Blown Saves	0 points
+CG 10	Complete Games	10 points
+ER -8	Earned Runs	-8 points
+GS 0	Games Started (Pitcher)	0 points
+HB -999999	Hit Batsmen	-2 points
+HLD 5 	Holds	5 points
+HR -8 	Home Runs Allowed	-8 points
+IP 15	Innings	15 points  # not sure what this is
+K 3	Strikeouts (Pitcher)	3 points
+QS -999999	Quality Starts	15 points
+SV 20	Saves	20 points
+SHO 15	Shutouts	15 points
+W 15	Wins	15 points
+L -10   Losses -10 points
+END
